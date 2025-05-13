@@ -17,11 +17,17 @@
 
 using std::string_literals::operator""s;
 
+//------------------------------------------------------------------------------
+//
+//------------------------------------------------------------------------------
 static bool is_slash(char ch)
 {
     return ch == '/' || ch == '\\';
 }
 
+//------------------------------------------------------------------------------
+//
+//------------------------------------------------------------------------------
 bool Application::parse_args(int argc, char* argv[])
 {
     switch (argc)
@@ -56,11 +62,17 @@ bool Application::parse_args(int argc, char* argv[])
     }
 }
 
+//------------------------------------------------------------------------------
+//
+//------------------------------------------------------------------------------
 bool Application::convert()
 {
     return (convert_mode == CONVERT_ROUTE) ? convert_route() : convert_model();
 }
 
+//------------------------------------------------------------------------------
+//
+//------------------------------------------------------------------------------
 bool Application::convert_route()
 {
     std::replace(in_dmd_route_path.begin(), in_dmd_route_path.end(), '\\', '/');
@@ -203,6 +215,9 @@ bool Application::convert_route()
     return true;
 }
 
+//------------------------------------------------------------------------------
+//
+//------------------------------------------------------------------------------
 bool Application::convert_model()
 {
     std::ifstream texture(in_texture_path);
@@ -237,6 +252,9 @@ bool Application::convert_model()
     return generate_gltf_model(model_data);
 }
 
+//------------------------------------------------------------------------------
+//
+//------------------------------------------------------------------------------
 bool Application::get_dmd_model_data(Geometry& model_data)
 {
     using PosIndex = std::uint32_t;
@@ -379,6 +397,9 @@ bool Application::get_dmd_model_data(Geometry& model_data)
     return true;
 }
 
+//------------------------------------------------------------------------------
+//
+//------------------------------------------------------------------------------
 bool Application::generate_gltf_model(Geometry& model_data)
 {
     for (auto& vertex : model_data.vertices)

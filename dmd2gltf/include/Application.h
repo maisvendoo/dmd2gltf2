@@ -2,6 +2,8 @@
 #define     APPLICATION_H
 
 #include    <string>
+#include    <cmdparser.hpp>
+#include    <command-line.h>
 
 struct Geometry;
 
@@ -52,6 +54,14 @@ private:
     std::string out_relative_texture_path;
 
     std::string gltf_directory_path;
+
+    cmd_line_t cmd_line;
+
+    /// Настройка парсера командной строки
+    void configure_parser(cli::Parser &parser);
+
+    /// Разбор командной строки
+    bool parse_command_line(cli::Parser &parser, cmd_line_t &cmd_line);
 };
 
 #endif // APPLICATION_H

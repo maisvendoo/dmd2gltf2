@@ -13,8 +13,6 @@
 #include    <utility>
 #include    <vector>
 
-#include    <cmdparser.hpp>
-
 using std::string_literals::operator""s;
 
 //------------------------------------------------------------------------------
@@ -30,6 +28,12 @@ static bool is_slash(char ch)
 //------------------------------------------------------------------------------
 bool Application::parse_args(int argc, char* argv[])
 {
+    cli::Parser parser(argc, argv);
+
+    configure_parser(parser);
+
+    parse_command_line(parser, cmd_line);
+
     switch (argc)
     {
         case 3:
@@ -607,6 +611,50 @@ bool Application::generate_gltf_model(Geometry& model_data)
     {
         std::filesystem::copy(in_texture_path, gltf_directory_path + '/' + out_relative_texture_path);
     }
+
+    return true;
+}
+
+//------------------------------------------------------------------------------
+//
+//------------------------------------------------------------------------------
+void Application::configure_parser(cli::Parser &parser)
+{
+    parser.set_optional<std::string>("i", "input-route",
+                                     "",
+                                     "Input DMD route path");
+
+    parser.set_optional<std::string>("o", "output-route",
+                                     "",
+                                     "Output GLTF route path");
+
+    parser.set_optional<std::string>("m", "input-model",
+                                     "",
+                                     "Input DMD model path");
+
+    parser.set_optional<std::string>("t", "input-texture",
+                                     "",
+                                     "Input DMD texture path");
+
+    parser.set_optional<std::string>("g", "output-model",
+                                     "",
+                                     "Output GLTF model path");
+
+    parser.enable_help();
+}
+
+//------------------------------------------------------------------------------
+//
+//------------------------------------------------------------------------------
+bool Application::parse_command_line(cli::Parser &parser, cmd_line_t &cmd_line)
+{
+    parser.run_and_exit_if_error();
+
+    cmd_line.input_route_path = parser.get<std::string>("i");
+    cmd_line.output_route_path = parser.get<std::string>("o");
+    cmd_line.input_model_path = parser.get<std::string>("m");
+    cmd_line.input_texture_path = parser.get<std::string>("t");
+    cmd_line.output_model_path = parser.get<std::string>("g");
 
     return true;
 }

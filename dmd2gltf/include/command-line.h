@@ -13,9 +13,10 @@ private:
 
     T       value;
 
+    bool    is_present;
+
 public:
 
-    bool    is_present;
 
     option_t()
         : value(T())
@@ -34,7 +35,19 @@ public:
 
     void operator=(T value)
     {
+        if (value == T())
+        {
+            is_present = false;
+            return;
+        }
+
         this->value = value;
+        is_present = true;
+    }
+
+    bool isPresent() const
+    {
+        return is_present;
     }
 };
 

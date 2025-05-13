@@ -64,7 +64,7 @@ private:
     bool parse_command_line(cli::Parser &parser, cmd_line_t &cmd_line);
 
     /// Выбор режима конвертации
-    ConvertMode set_convert_mode(const cmd_line_t &cmd_line);
+    bool set_convert_mode(const cmd_line_t &cmd_line, ConvertMode &convert_mode);
 };
 
 #endif // APPLICATION_H

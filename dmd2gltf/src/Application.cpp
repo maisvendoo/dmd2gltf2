@@ -2,13 +2,11 @@
 #include    <Geometry.h>
 
 #include    <algorithm>
-#include    <cctype>
 #include    <cstdint>
 #include    <filesystem>
 #include    <fstream>
 #include    <iostream>
 #include    <map>
-#include    <set>
 #include    <string>
 #include    <utility>
 #include    <vector>
@@ -33,6 +31,8 @@ bool Application::parse_args(int argc, char* argv[])
     configure_parser(parser);
 
     parse_command_line(parser, cmd_line);
+
+    return set_convert_mode(cmd_line, convert_mode);
 
     switch (argc)
     {
@@ -657,4 +657,50 @@ bool Application::parse_command_line(cli::Parser &parser, cmd_line_t &cmd_line)
     cmd_line.output_model_path = parser.get<std::string>("g");
 
     return true;
+}
+
+//------------------------------------------------------------------------------
+//
+//------------------------------------------------------------------------------
+bool Application::set_convert_mode(const cmd_line_t &cmd_line,
+                                   ConvertMode &convert_mode)
+{
+    if (cmd_line.input_route_path.isPresent())
+    {
+        if (cmd_line.output_route_path.isPresent())
+        {
+            convert_mode = CONVERT_ROUTE;
+            return true;
+        }
+        else
+        {
+            std::cerr << "ERROR: Missing route output path" << std::endl;
+        }
+    }
+
+    if (cmd_line.input_model_path.isPresent())
+    {
+        if (cmd_line.input_texture_path.isPresent())
+        {
+            if (cmd_line.output_model_path.isPresent())
+            {
+                convert_mode = CONVERT_MODEL;
+                return true;
+            }
+            else
+            {
+                std::cerr << "ERROR: Missing output GLTF model path" << std::endl;
+            }
+        }
+        else
+        {
+            std::cerr << "ERROR: Missing input DMD texture path" << std::endl;
+        }
+    }
+    else
+    {
+        std::cerr << "ERROR: Missing input DMD model path" << std::endl;
+    }
+
+    return false;
 }

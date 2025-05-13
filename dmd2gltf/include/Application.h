@@ -62,6 +62,9 @@ private:
 
     /// Разбор командной строки
     bool parse_command_line(cli::Parser &parser, cmd_line_t &cmd_line);
+
+    /// Выбор режима конвертации
+    ConvertMode set_convert_mode(const cmd_line_t &cmd_line);
 };
 
 #endif // APPLICATION_H

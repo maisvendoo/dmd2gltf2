@@ -1,21 +1,9 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required (VERSION 3.7)
 
-project(dmd2gltf LANGUAGES CXX)
+set (CMAKE_CXX_STANDARD 17)
+set (CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+project(dmd2gltf)
 
-add_executable(dmd2gltf
-    ${PROJECT_SOURCE_DIR}/include/Application.h
-    ${PROJECT_SOURCE_DIR}/include/Geometry.h
-    ${PROJECT_SOURCE_DIR}/include/ModelConverter.h
-    ${PROJECT_SOURCE_DIR}/include/RouteConverter.h
-    ${PROJECT_SOURCE_DIR}/src/Application.cpp
-    ${PROJECT_SOURCE_DIR}/src/main.cpp
-    ${PROJECT_SOURCE_DIR}/src/ModelConverter.cpp
-    ${PROJECT_SOURCE_DIR}/src/RouteConverter.cpp
-)
-
-target_include_directories(dmd2gltf PRIVATE
-    ${PROJECT_SOURCE_DIR}/include
-)
+add_subdirectory(CmdParser)
+add_subdirectory(dmd2gltf)

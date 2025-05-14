@@ -11,12 +11,12 @@ struct option_t
 {
 private:
 
-    T       value;
 
     bool    is_present;
 
 public:
 
+    T       value;
 
     option_t()
         : value(T())

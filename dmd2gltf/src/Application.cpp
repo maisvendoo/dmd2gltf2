@@ -14,6 +14,8 @@
 
 using std::string_literals::operator""s;
 
+namespace fs = std::filesystem;
+
 //------------------------------------------------------------------------------
 //
 //------------------------------------------------------------------------------
@@ -72,29 +74,25 @@ bool Application::parse_args(int argc, char* argv[])
 //------------------------------------------------------------------------------
 bool Application::convert()
 {
-    return (convert_mode == CONVERT_ROUTE) ? convert_route() : convert_model();
+    return (convert_mode == CONVERT_ROUTE) ? convert_route(cmd_line.input_route_path.value,
+                                                           cmd_line.output_route_path.value) :
+               convert_model(cmd_line.input_model_path.value,
+                             cmd_line.input_texture_path.value,
+                             cmd_line.output_model_path.value);
 }
 
 //------------------------------------------------------------------------------
 //
 //------------------------------------------------------------------------------
-bool Application::convert_route()
+bool Application::convert_route(std::string &in_dmd_route_path, std::string &out_gltf_route_path)
 {
-    std::replace(in_dmd_route_path.begin(), in_dmd_route_path.end(), '\\', '/');
-    std::replace(out_gltf_route_path.begin(), out_gltf_route_path.end(), '\\', '/');
+    // Преобразуем пути к платформоспецифичному виду
+    path_to_native_separator(in_dmd_route_path);
+    path_to_native_separator(out_gltf_route_path);
 
-    while (in_dmd_route_path.back() == '/')
-    {
-        in_dmd_route_path.pop_back();
-    }
-
-    while (out_gltf_route_path.back() == '/')
-    {
-        out_gltf_route_path.pop_back();
-    }
-
-    std::ifstream objects_ref(in_dmd_route_path + "/objects.ref");
-    if (!objects_ref)
+    // Читаем список объектов из базы маршрута
+    std::ifstream objects_ref(combine_path(in_dmd_route_path, "objects.ref"), std::ios::in);
+    if (!objects_ref.is_open())
     {
         std::cerr << "Failed to open objects.ref" << std::endl;
         return false;
@@ -127,48 +125,63 @@ bool Application::convert_route()
         return false;
     }
 
-    std::filesystem::create_directories(out_gltf_route_path);
-    std::filesystem::create_directory(out_gltf_route_path + "/textures");
+    // Создаем каталог под новый маршрут
+    fs::create_directories(out_gltf_route_path);
+    // Создаем каталог под текстуры
+    fs::create_directory(combine_path(out_gltf_route_path, "textures"));
 
-    if (!std::filesystem::exists(out_gltf_route_path + "/topology"))
+    // Копируем топологию
+    try
     {
-        std::filesystem::copy(in_dmd_route_path + "/topology", out_gltf_route_path + "/topology");
+        fs::copy(combine_path(in_dmd_route_path, "topology"),
+                 combine_path(out_gltf_route_path, "topology"),
+                 fs::copy_options::overwrite_existing | fs::copy_options::recursive);
+    }
+    catch (std::exception &e)
+    {
+        std::cerr << e.what();
     }
 
-    if (!std::filesystem::exists(out_gltf_route_path + "/description.xml"))
+    try
     {
-        std::filesystem::copy(in_dmd_route_path + "/description.xml", out_gltf_route_path + "/description.xml");
+        fs::copy(combine_path(in_dmd_route_path, "description.xml"),
+                 combine_path(out_gltf_route_path, "description.xml"),
+                 fs::copy_options::overwrite_existing | fs::copy_options::recursive);
+    }
+    catch (std::exception &e)
+    {
+        std::cerr << e.what();
     }
 
-    if (!std::filesystem::exists(out_gltf_route_path + "/route1.map"))
+    // УБРАТЬ, ПЕРЕДЕЛАВ СИМУЛЯТОР НА ОБРАБОТКУ КАРТЫ ИЗ ТОПОЛОГИИ!!!
+    try
     {
-        std::filesystem::copy(in_dmd_route_path + "/route1.map", out_gltf_route_path + "/route1.map");
+        std::filesystem::copy(combine_path(in_dmd_route_path, "route1.map"),
+                              combine_path(out_gltf_route_path, "route1.map"),
+                              fs::copy_options::overwrite_existing | fs::copy_options::recursive);
+    }
+    catch (std::exception &e)
+    {
+        std::cerr << e.what();
     }
 
     std::map<Label, RelativePath> new_objects;
 
     for (const auto& [label, paths] : objects)
     {
-        in_dmd_model_path = in_dmd_route_path + paths.first;
-        in_texture_path = in_dmd_route_path + paths.second;
+        std::string in_dmd_model_path = in_dmd_route_path + paths.first;
+        path_to_native_separator(in_dmd_model_path);
+        std::string in_texture_path = in_dmd_route_path + paths.second;
+        path_to_native_separator(in_texture_path);
 
-        // std::string lower_model_path = paths.first;
-        // std::string lower_texture_path = paths.second;
+        fs::path model_path = paths.first;
+        fs::path texture_path = paths.second;
 
-        // for (char& ch : lower_model_path)
-        // {
-        //     ch = std::tolower(ch);
-        // }
-        // for (char& ch : lower_texture_path)
-        // {
-        //     ch = std::tolower(ch);
-        // }
+        fs::create_directories(out_gltf_route_path + model_path.parent_path().string() + "/bin");
 
-        std::filesystem::path model_path = paths.first;
-        std::filesystem::path texture_path = paths.second;
+        std::string out_gltf_model_path = out_gltf_route_path + model_path.parent_path().string() + '/' + model_path.stem().string() + ".gltf";
+        path_to_native_separator(out_gltf_model_path);
 
-        std::filesystem::create_directories(out_gltf_route_path + model_path.parent_path().string() + "/bin");
-        out_gltf_model_path = out_gltf_route_path + model_path.parent_path().string() + '/' + model_path.stem().string() + ".gltf";
         out_relative_bin_path = "bin/"s + model_path.stem().string() + ".bin";
 
         std::string mps = model_path.string();
@@ -180,35 +193,16 @@ bool Application::convert_route()
         }
         out_relative_texture_path += "textures/" + texture_path.filename().string();
 
-        if (convert_model())
+        if (convert_model(in_dmd_model_path, in_texture_path, out_gltf_model_path))
         {
             new_objects.insert({label, model_path.parent_path().string() + '/' + model_path.stem().string() + ".gltf"});
-        }
-
-        // std::cout << in_dmd_model_path << '\n'
-        //     << in_texture_path << '\n'
-        //     << out_gltf_model_path << '\n'
-        //     << out_relative_bin_path << '\n'
-        //     << out_relative_texture_path << "\n\n";
-
-        // std::filesystem::path z(paths.first);
-        // std::cout <<
-        //     "Root name: " << z.root_name() << "\n"
-        //     "Root directory: " << z.root_directory() << "\n"
-        //     "Root path: " << z.root_path() << "\n"
-        //     "Relative path: " << z.relative_path() << "\n"
-        //     "Parent path: " << z.parent_path() << "\n"
-        //     "Filename: " << z.filename() << "\n"
-        //     "Stem: " << z.stem() << "\n"
-        //     "Extension: " << z.extension() << "\n\n";
-
-        // std::cout << label << "    " << paths.first << "    " << paths.second << std::endl;
+        }        
     }
 
-    std::ofstream new_objects_ref(out_gltf_route_path + "/objects.ref");
-    if (!new_objects_ref)
+    std::ofstream new_objects_ref(combine_path(out_gltf_route_path, "objects.ref"), std::ios::out);
+    if (!new_objects_ref.is_open())
     {
-        std::cerr << "Failed to open new objects.ref" << std::endl;
+        std::cerr << "Failed to create new objects.ref" << std::endl;
         return false;
     }
 
@@ -223,7 +217,9 @@ bool Application::convert_route()
 //------------------------------------------------------------------------------
 //
 //------------------------------------------------------------------------------
-bool Application::convert_model()
+bool Application::convert_model(std::string &in_dmd_model_path,
+                                std::string &in_texture_path,
+                                std::string &out_gltf_model_path)
 {
     std::ifstream texture(in_texture_path);
     if (!texture)
@@ -249,18 +245,19 @@ bool Application::convert_model()
     }
 
     Geometry model_data;
-    if (!get_dmd_model_data(model_data))
+
+    if (!get_dmd_model_data(in_dmd_model_path, model_data))
     {
         return false;
     }
 
-    return generate_gltf_model(model_data);
+    return generate_gltf_model(model_data, gltf_directory_path, out_relative_bin_path);
 }
 
 //------------------------------------------------------------------------------
 //
 //------------------------------------------------------------------------------
-bool Application::get_dmd_model_data(Geometry& model_data)
+bool Application::get_dmd_model_data(std::string &in_dmd_model_path, Geometry& model_data)
 {
     using PosIndex = std::uint32_t;
     using TexIndex = std::uint32_t;
@@ -405,7 +402,9 @@ bool Application::get_dmd_model_data(Geometry& model_data)
 //------------------------------------------------------------------------------
 //
 //------------------------------------------------------------------------------
-bool Application::generate_gltf_model(Geometry& model_data)
+bool Application::generate_gltf_model(Geometry& model_data,
+                                      std::string &gltf_directory_path,
+                                      std::string &out_relative_bin_path)
 {
     for (auto& vertex : model_data.vertices)
     {
@@ -415,8 +414,8 @@ bool Application::generate_gltf_model(Geometry& model_data)
 
     std::string full_bin_path = gltf_directory_path + '/' + out_relative_bin_path;
 
-    std::ofstream bin_file(full_bin_path, std::ios::binary);
-    if (!bin_file)
+    std::ofstream bin_file(full_bin_path, std::ios::binary | std::ios::out);
+    if (!bin_file.is_open())
     {
         std::cerr << "Failed to open " << full_bin_path << std::endl;
         return false;

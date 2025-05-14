@@ -2,6 +2,8 @@ set(TARGET dmd2gltf)
 
 project(${TARGET})
 
+set(EXECUTABLE_OUTPUT_PATH "../../bin")
+
 file(GLOB INCLUDES "./include/*.h")
 file(GLOB SOURCES "./src/*.cpp")
 

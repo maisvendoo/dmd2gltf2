@@ -29,16 +29,21 @@ public:
 private:
 
     /// Конвертация маршрута целиком
-    bool convert_route();
+    bool convert_route(std::string &in_dmd_route_path,
+                       std::string &out_gltf_route_path);
 
     /// Конвертация отдельной модели
-    bool convert_model();
+    bool convert_model(std::string &in_dmd_model_path,
+                       std::string &in_texture_path,
+                       std::string &out_gltf_model_path);
 
     /// Получение данных о модели из DMD-файла
-    bool get_dmd_model_data(Geometry& model_data);
+    bool get_dmd_model_data(std::string &in_dmd_model_path, Geometry& model_data);
 
     /// Генерация GLTF-модели
-    bool generate_gltf_model(Geometry& model_data);
+    bool generate_gltf_model(Geometry& model_data,
+                             std::string &gltf_directory_path,
+                             std::string &out_relative_bin_path);
 
 private:
 

@@ -12,8 +12,6 @@
 #include    <utility>
 #include    <vector>
 
-using std::string_literals::operator""s;
-
 namespace fs = std::filesystem;
 
 //------------------------------------------------------------------------------
@@ -35,38 +33,7 @@ bool Application::parse_args(int argc, char* argv[])
 
     parse_command_line(parser, cmd_line);
 
-    return set_convert_mode(cmd_line, convert_mode);
-
-    switch (argc)
-    {
-        case 3:
-        {
-            convert_mode = CONVERT_ROUTE;
-            in_dmd_route_path = argv[1];
-            out_gltf_route_path = argv[2];
-
-            return true;
-        }
-        case 6:
-        {
-            convert_mode = CONVERT_MODEL;
-            in_dmd_model_path = argv[1];
-            in_texture_path = argv[2];
-            out_gltf_model_path = argv[3];
-            out_relative_bin_path = argv[4];
-            out_relative_texture_path = argv[5];
-
-            return true;
-        }
-        default:
-        {
-            std::cerr << "Valid usage:\n"
-                "    dmd2gltf in_dmd_route_path out_gltf_route_path\n"
-                "    dmd2gltf in_dmd_model_path in_texture_path out_gltf_model_path out_relative_bin_path out_relative_texture_path" << std::endl;
-
-            return false;
-        }
-    }
+    return set_convert_mode(cmd_line, convert_mode);    
 }
 
 //------------------------------------------------------------------------------
@@ -182,18 +149,25 @@ bool Application::convert_route(std::string &in_dmd_route_path, std::string &out
         std::string out_gltf_model_path = out_gltf_route_path + model_path.parent_path().string() + '/' + model_path.stem().string() + ".gltf";
         path_to_native_separator(out_gltf_model_path);
 
-        out_relative_bin_path = "bin/"s + model_path.stem().string() + ".bin";
+        std::string out_relative_bin_path = "bin/"s + model_path.stem().string() + ".bin";
 
         std::string mps = model_path.string();
         auto slash_count = std::count(mps.begin(), mps.end(), '/');
-        out_relative_texture_path = "";
+
+        std::string out_relative_texture_path = "";
+
         for (int i = 1; i < slash_count; ++i)
         {
             out_relative_texture_path += "../";
         }
+
         out_relative_texture_path += "textures/" + texture_path.filename().string();
 
-        if (convert_model(in_dmd_model_path, in_texture_path, out_gltf_model_path))
+        if (convert_model(in_dmd_model_path,
+                          in_texture_path,
+                          out_gltf_model_path,
+                          out_relative_bin_path,
+                          out_relative_texture_path))
         {
             new_objects.insert({label, model_path.parent_path().string() + '/' + model_path.stem().string() + ".gltf"});
         }        
@@ -219,22 +193,25 @@ bool Application::convert_route(std::string &in_dmd_route_path, std::string &out
 //------------------------------------------------------------------------------
 bool Application::convert_model(std::string &in_dmd_model_path,
                                 std::string &in_texture_path,
-                                std::string &out_gltf_model_path)
+                                std::string &out_gltf_model_path,
+                                std::string out_relative_bin_path,
+                                std::string out_relative_texture_path)
 {
-    std::ifstream texture(in_texture_path);
-    if (!texture)
+    Geometry model_data;
+
+    std::ifstream texture(in_texture_path, std::ios::in);
+    if (!texture.is_open())
     {
         std::cerr << "Failed to open " << in_texture_path << std::endl;
         return false;
     }
-    // std::cout <<
-        // "\nin_model: " << in_dmd_model_path << "\n"
-        // "in_texture: " << in_texture_path << "\n"
-        // "out_gltf: " << out_gltf_model_path << "\n"
-        // "out_bin: " << out_relative_bin_path << "\n"
-        // "out_texture: " << out_relative_texture_path << "\n";
+
+    std::string texture_ext = fs::path(in_texture_path).extension().string();
+    model_data.is_TGA_texture =  texture_ext == ".tga";
 
     auto last_slash_pos = out_gltf_model_path.find_last_of(separator());
+
+    std::string gltf_directory_path = "";
 
     if (last_slash_pos == std::string::npos)
     {
@@ -245,20 +222,24 @@ bool Application::convert_model(std::string &in_dmd_model_path,
         gltf_directory_path = out_gltf_model_path.substr(0, last_slash_pos);
     }
 
-    Geometry model_data;
 
     if (!get_dmd_model_data(in_dmd_model_path, model_data))
     {
         return false;
     }
 
-    return generate_gltf_model(model_data, in_texture_path, gltf_directory_path, out_relative_bin_path);
+    return generate_gltf_model(model_data,
+                               in_texture_path,
+                               gltf_directory_path,
+                               out_relative_bin_path,
+                               out_relative_texture_path);
 }
 
 //------------------------------------------------------------------------------
 //
 //------------------------------------------------------------------------------
-bool Application::get_dmd_model_data(std::string &in_dmd_model_path, Geometry& model_data)
+bool Application::get_dmd_model_data(std::string &in_dmd_model_path,
+                                     Geometry& model_data)
 {
     using PosIndex = std::uint32_t;
     using TexIndex = std::uint32_t;
@@ -347,7 +328,11 @@ bool Application::get_dmd_model_data(std::string &in_dmd_model_path, Geometry& m
     for (auto& tex_coord : tex_coords)
     {
         model_file >> tex_coord.x >> tex_coord.y >> buffer;
-        tex_coord.y = 1.0f - tex_coord.y;
+
+        if (!model_data.is_TGA_texture)
+        {
+            tex_coord.y = 1.0f - tex_coord.y;
+        }
     }
 
     if (!model_file)
@@ -409,7 +394,8 @@ bool Application::get_dmd_model_data(std::string &in_dmd_model_path, Geometry& m
 bool Application::generate_gltf_model(Geometry& model_data,
                                       std::string &in_texture_path,
                                       std::string &gltf_directory_path,
-                                      std::string &out_relative_bin_path)
+                                      std::string &out_relative_bin_path,
+                                      std::string &out_relative_texture_path)
 {
     for (auto& vertex : model_data.vertices)
     {
@@ -660,17 +646,14 @@ void Application::configure_parser(cli::Parser &parser)
 //------------------------------------------------------------------------------
 //
 //------------------------------------------------------------------------------
-bool Application::parse_command_line(cli::Parser &parser, cmd_line_t &cmd_line)
+void Application::parse_command_line(cli::Parser &parser, cmd_line_t &cmd_line)
 {
     parser.run_and_exit_if_error();
-
     cmd_line.input_route_path = parser.get<std::string>("i");
     cmd_line.output_route_path = parser.get<std::string>("o");
     cmd_line.input_model_path = parser.get<std::string>("m");
     cmd_line.input_texture_path = parser.get<std::string>("t");
-    cmd_line.output_model_path = parser.get<std::string>("g");
-
-    return true;
+    cmd_line.output_model_path = parser.get<std::string>("g");    
 }
 
 //------------------------------------------------------------------------------

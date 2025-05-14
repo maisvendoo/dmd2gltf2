@@ -7,6 +7,8 @@
 
 struct Geometry;
 
+using std::string_literals::operator""s;
+
 //------------------------------------------------------------------------------
 //
 //------------------------------------------------------------------------------
@@ -35,7 +37,9 @@ private:
     /// Конвертация отдельной модели
     bool convert_model(std::string &in_dmd_model_path,
                        std::string &in_texture_path,
-                       std::string &out_gltf_model_path);
+                       std::string &out_gltf_model_path,
+                       std::string out_relative_bin_path = "",
+                       std::string out_relative_texture_path = "");
 
     /// Получение данных о модели из DMD-файла
     bool get_dmd_model_data(std::string &in_dmd_model_path, Geometry& model_data);
@@ -44,22 +48,12 @@ private:
     bool generate_gltf_model(Geometry& model_data,
                              std::string &in_texture_path,
                              std::string &gltf_directory_path,
-                             std::string &out_relative_bin_path);
+                             std::string &out_relative_bin_path,
+                             std::string &out_relative_texture_path);
 
 private:
 
     ConvertMode convert_mode;
-
-    std::string in_dmd_route_path;
-    std::string in_dmd_model_path;
-    std::string in_texture_path;
-
-    std::string out_gltf_route_path;
-    std::string out_gltf_model_path;
-    std::string out_relative_bin_path;
-    std::string out_relative_texture_path;
-
-    std::string gltf_directory_path;
 
     cmd_line_t cmd_line;
 
@@ -67,7 +61,7 @@ private:
     void configure_parser(cli::Parser &parser);
 
     /// Разбор командной строки
-    bool parse_command_line(cli::Parser &parser, cmd_line_t &cmd_line);
+    void parse_command_line(cli::Parser &parser, cmd_line_t &cmd_line);
 
     /// Выбор режима конвертации
     bool set_convert_mode(const cmd_line_t &cmd_line, ConvertMode &convert_mode);

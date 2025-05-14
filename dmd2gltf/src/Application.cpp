@@ -1,5 +1,6 @@
 #include    <Application.h>
 #include    <Geometry.h>
+#include    <filesystem-utils.h>
 
 #include    <algorithm>
 #include    <cstdint>

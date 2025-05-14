@@ -42,6 +42,7 @@ private:
 
     /// Генерация GLTF-модели
     bool generate_gltf_model(Geometry& model_data,
+                             std::string &in_texture_path,
                              std::string &gltf_directory_path,
                              std::string &out_relative_bin_path);
 

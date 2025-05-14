@@ -234,7 +234,8 @@ bool Application::convert_model(std::string &in_dmd_model_path,
         // "out_bin: " << out_relative_bin_path << "\n"
         // "out_texture: " << out_relative_texture_path << "\n";
 
-    auto last_slash_pos = out_gltf_model_path.find_last_of('/');
+    auto last_slash_pos = out_gltf_model_path.find_last_of(separator());
+
     if (last_slash_pos == std::string::npos)
     {
         gltf_directory_path = ".";
@@ -251,7 +252,7 @@ bool Application::convert_model(std::string &in_dmd_model_path,
         return false;
     }
 
-    return generate_gltf_model(model_data, gltf_directory_path, out_relative_bin_path);
+    return generate_gltf_model(model_data, in_texture_path, gltf_directory_path, out_relative_bin_path);
 }
 
 //------------------------------------------------------------------------------
@@ -263,12 +264,15 @@ bool Application::get_dmd_model_data(std::string &in_dmd_model_path, Geometry& m
     using TexIndex = std::uint32_t;
     using VertexIndex = std::uint32_t;
 
-    std::ifstream model_file(in_dmd_model_path);
-    if (!model_file)
+    std::ifstream model_file(in_dmd_model_path, std::ios::in);
+    if (!model_file.is_open())
     {
         std::cerr << "Failed to open " << in_dmd_model_path << std::endl;
         return false;
     }
+
+    std::string file_name = fs::path(in_dmd_model_path).filename().string();
+    model_data.model_file_name = file_name.substr(0, file_name.find_last_of('.'));
 
     std::string buffer;
     while (buffer != "TriMesh()")
@@ -403,6 +407,7 @@ bool Application::get_dmd_model_data(std::string &in_dmd_model_path, Geometry& m
 //
 //------------------------------------------------------------------------------
 bool Application::generate_gltf_model(Geometry& model_data,
+                                      std::string &in_texture_path,
                                       std::string &gltf_directory_path,
                                       std::string &out_relative_bin_path)
 {
@@ -412,7 +417,8 @@ bool Application::generate_gltf_model(Geometry& model_data,
         vertex.pos.z = -vertex.pos.z;
     }
 
-    std::string full_bin_path = gltf_directory_path + '/' + out_relative_bin_path;
+    path_to_native_separator(out_relative_bin_path);
+    std::string full_bin_path = combine_path(gltf_directory_path, out_relative_bin_path);
 
     std::ofstream bin_file(full_bin_path, std::ios::binary | std::ios::out);
     if (!bin_file.is_open())
@@ -466,10 +472,12 @@ bool Application::generate_gltf_model(Geometry& model_data,
         max_tex.y = std::max(max_tex.y, vertex.tex_coord.y);
     }
 
-    std::ofstream gltf_file(out_gltf_model_path);
-    if (!gltf_file)
+    std::string gltf_path = combine_path(gltf_directory_path, model_data.model_file_name + ".gltf");
+
+    std::ofstream gltf_file(gltf_path, std::ios::out);
+    if (!gltf_file.is_open())
     {
-        std::cerr << "Failed to open " << out_gltf_model_path << std::endl;
+        std::cerr << "Failed to open " << gltf_path << std::endl;
         return false;
     }
 
@@ -609,7 +617,14 @@ bool Application::generate_gltf_model(Geometry& model_data,
 
     if (!std::filesystem::exists(gltf_directory_path + '/' + out_relative_texture_path))
     {
-        std::filesystem::copy(in_texture_path, gltf_directory_path + '/' + out_relative_texture_path);
+        try
+        {
+            std::filesystem::copy(in_texture_path, gltf_directory_path + '/' + out_relative_texture_path);
+        }
+        catch (std::exception &e)
+        {
+            std::cerr << e.what() << std::endl;
+        }
     }
 
     return true;

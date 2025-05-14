@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <vector>
+#include <string>
 
 struct Vec2
 {
@@ -25,6 +26,7 @@ struct Vertex
 
 struct Geometry
 {
+    std::string model_file_name = "";
     std::vector<Vertex> vertices;
     std::vector<std::uint32_t> indices;
 };

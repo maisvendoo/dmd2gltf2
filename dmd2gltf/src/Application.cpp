@@ -417,7 +417,6 @@ bool Application::generate_gltf_model(Geometry& model_data,
         vertex.pos.z = -vertex.pos.z;
     }
 
-    path_to_native_separator(out_relative_bin_path);
     std::string full_bin_path = combine_path(gltf_directory_path, out_relative_bin_path);
 
     std::ofstream bin_file(full_bin_path, std::ios::binary | std::ios::out);

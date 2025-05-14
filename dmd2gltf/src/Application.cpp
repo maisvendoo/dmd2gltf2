@@ -127,19 +127,7 @@ bool Application::convert_route(std::string &in_dmd_route_path, std::string &out
     catch (std::exception &e)
     {
         std::cerr << e.what();
-    }
-
-    // УБРАТЬ, ПЕРЕДЕЛАВ СИМУЛЯТОР НА ОБРАБОТКУ КАРТЫ ИЗ ТОПОЛОГИИ!!!
-    try
-    {
-        std::filesystem::copy(combine_path(in_dmd_route_path, "route1.map"),
-                              combine_path(out_gltf_route_path, "route1.map"),
-                              fs::copy_options::overwrite_existing | fs::copy_options::recursive);
-    }
-    catch (std::exception &e)
-    {
-        std::cerr << e.what();
-    }
+    }    
 
     std::map<Label, RelativePath> new_objects;
 

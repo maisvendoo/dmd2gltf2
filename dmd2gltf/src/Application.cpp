@@ -41,11 +41,20 @@ bool Application::parse_args(int argc, char* argv[])
 //------------------------------------------------------------------------------
 bool Application::convert()
 {
-    return (convert_mode == CONVERT_ROUTE) ? convert_route(cmd_line.input_route_path.value,
-                                                           cmd_line.output_route_path.value) :
-               convert_model(cmd_line.input_model_path.value,
+    if (convert_mode == CONVERT_ROUTE)
+    {
+        return convert_route(cmd_line.input_route_path.value,
+                             cmd_line.output_route_path.value);
+    }
+
+    if (convert_mode == CONVERT_MODEL)
+    {
+        return convert_model(cmd_line.input_model_path.value,
                              cmd_line.input_texture_path.value,
                              cmd_line.output_model_path.value);
+    }
+
+    return false;
 }
 
 //------------------------------------------------------------------------------
